@@ -24,14 +24,17 @@ fi
 export PYTHONPATH="$HOME/ros2_ws/src/my_robot_bringup:$PYTHONPATH"
 
 # 修復 ament_python symlinks（讓 ros2 run 找得到執行檔）
-if [ -d "$HOME/ros2_ws/install/my_robot_bringup/bin" ]; then
-    mkdir -p "$HOME/ros2_ws/install/my_robot_bringup/lib/my_robot_bringup"
-    for exe in "$HOME/ros2_ws/install/my_robot_bringup/bin/"*; do
-        name=$(basename "$exe")
-        [ -e "$HOME/ros2_ws/install/my_robot_bringup/lib/my_robot_bringup/$name" ] || \
-            ln -sf "../../bin/$name" "$HOME/ros2_ws/install/my_robot_bringup/lib/my_robot_bringup/$name"
-    done
-fi
+for pkg in my_robot_bringup esp32_bridge; do
+    pkg_dir="$HOME/ros2_ws/install/$pkg"
+    if [ -d "$pkg_dir/bin" ]; then
+        mkdir -p "$pkg_dir/lib/$pkg"
+        for exe in "$pkg_dir/bin/"*; do
+            name=$(basename "$exe")
+            [ -e "$pkg_dir/lib/$pkg/$name" ] || \
+                ln -sf "../../bin/$name" "$pkg_dir/lib/$pkg/$name" 2>/dev/null
+        done
+    fi
+done
 
 echo "🤖 ROS2 Jazzy 環境已載入"
 echo "   Python: $(/usr/bin/python3.12 --version)"

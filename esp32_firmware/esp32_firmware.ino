@@ -33,13 +33,10 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 // PWM 參數
 #define PWM_FREQ     5000
 #define PWM_RES      8     // 8-bit = 0-255
-#define LEFT_PWM_CH  0
-#define RIGHT_PWM_CH 1
-
 WebServer server(80);
 
-// ===== 馬達控制 =====
-void setMotor(int enA, int in1, int in2, float speed, int pwm_ch) {
+// ===== 馬達控制 (ESP32 core v3.x — ledcWrite 用 pin 而非 channel) =====
+void setMotor(int enPin, int in1, int in2, float speed) {
   // speed: -1.0 ~ 1.0（負值 = 反轉）
   int pwm = abs(speed) * 255;
   pwm = constrain(pwm, 0, 255);
@@ -54,7 +51,7 @@ void setMotor(int enA, int in1, int in2, float speed, int pwm_ch) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
   }
-  ledcWrite(pwm_ch, pwm);
+  ledcWrite(enPin, pwm);
 }
 
 // ===== HTTP API =====
@@ -66,8 +63,8 @@ void handleMotor() {
   left = constrain(left, -1.0, 1.0);
   right = constrain(right, -1.0, 1.0);
   
-  setMotor(LEFT_ENA, LEFT_IN1, LEFT_IN2, left, LEFT_PWM_CH);
-  setMotor(RIGHT_ENB, RIGHT_IN3, RIGHT_IN4, right, RIGHT_PWM_CH);
+  setMotor(LEFT_ENA, LEFT_IN1, LEFT_IN2, left);
+  setMotor(RIGHT_ENB, RIGHT_IN3, RIGHT_IN4, right);
   
   String response = "{\"left\":" + String(left) + ",\"right\":" + String(right) + "}";
   server.send(200, "application/json", response);
@@ -102,15 +99,13 @@ void setup() {
   pinMode(RIGHT_IN3, OUTPUT);
   pinMode(RIGHT_IN4, OUTPUT);
   
-  // PWM
-  ledcSetup(LEFT_PWM_CH, PWM_FREQ, PWM_RES);
-  ledcSetup(RIGHT_PWM_CH, PWM_FREQ, PWM_RES);
-  ledcAttachPin(LEFT_ENA, LEFT_PWM_CH);
-  ledcAttachPin(RIGHT_ENB, RIGHT_PWM_CH);
+  // PWM (ESP32 core v3.x — ledcAttach 合併 freq+resolution)
+  ledcAttach(LEFT_ENA, PWM_FREQ, PWM_RES);
+  ledcAttach(RIGHT_ENB, PWM_FREQ, PWM_RES);
   
   // 停止馬達
-  setMotor(LEFT_ENA, LEFT_IN1, LEFT_IN2, 0, LEFT_PWM_CH);
-  setMotor(RIGHT_ENB, RIGHT_IN3, RIGHT_IN4, 0, RIGHT_PWM_CH);
+  setMotor(LEFT_ENA, LEFT_IN1, LEFT_IN2, 0);
+  setMotor(RIGHT_ENB, RIGHT_IN3, RIGHT_IN4, 0);
   
   // WiFi
   Serial.printf("Connecting to %s", WIFI_SSID);
